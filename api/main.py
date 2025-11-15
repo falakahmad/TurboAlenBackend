@@ -1390,6 +1390,63 @@ async def download_file(request: FileDownloadRequest):
         log_exception("FILE_DOWNLOAD_ERROR", e)
         raise HTTPException(500, f"File download failed: {str(e)}")
 
+# Serve files by path from output directory (for Vercel/serverless environments)
+@app.get("/files/serve")
+@handle_api_error
+async def serve_file_by_path(file_path: str):
+    """Serve a file by its path from the output directory."""
+    try:
+        # Security: Only allow files from output directory
+        output_dir = _get_output_dir()
+        
+        # Resolve the file path
+        if os.path.isabs(file_path):
+            resolved_path = file_path
+        else:
+            # If relative, resolve relative to output directory
+            resolved_path = os.path.join(output_dir, file_path)
+        
+        # Normalize path and ensure it's within output directory
+        resolved_path = os.path.abspath(os.path.normpath(resolved_path))
+        
+        # Security check: ensure path is within output directory
+        if not resolved_path.startswith(os.path.abspath(output_dir)):
+            raise APIError("Access denied: file path outside output directory", 403, "ACCESS_DENIED")
+        
+        # Check if file exists
+        if not os.path.exists(resolved_path) or not os.path.isfile(resolved_path):
+            raise APIError(f"File not found: {os.path.basename(resolved_path)}", 404, "FILE_NOT_FOUND")
+        
+        # Determine content type
+        ext = os.path.splitext(resolved_path)[1].lower()
+        content_type_map = {
+            '.txt': 'text/plain; charset=utf-8',
+            '.md': 'text/markdown; charset=utf-8',
+            '.json': 'application/json; charset=utf-8',
+            '.pdf': 'application/pdf',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        }
+        content_type = content_type_map.get(ext, 'application/octet-stream')
+        
+        # Get filename for Content-Disposition
+        filename = os.path.basename(resolved_path)
+        
+        # Return file as streaming response
+        return StreamingResponse(
+            open(resolved_path, 'rb'),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+            }
+        )
+    except APIError:
+        raise
+    except Exception as e:
+        from logger import log_exception
+        log_exception("FILE_SERVE_ERROR", e)
+        raise HTTPException(500, f"File serve failed: {str(e)}")
+
 # Google Drive integration
 @app.post("/files/drive/upload")
 async def upload_to_drive(request: Request):
