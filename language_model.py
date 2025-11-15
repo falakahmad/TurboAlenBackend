@@ -4,8 +4,10 @@ from typing import Protocol, List, Dict, Any
 import time
 import math
 import os
+import json
 from collections import deque, defaultdict
 from datetime import datetime
+from pathlib import Path
 try:  # optional dependency for token budgeting
     import tiktoken
 except Exception:  # pragma: no cover
@@ -44,7 +46,7 @@ def calculate_cost(tokens_in: int, tokens_out: int, model: str = "gpt-4") -> dic
         'model': model
     }
 
-# Simple in-memory analytics store (exported for API)
+# Simple in-memory analytics store with persistence (exported for API)
 class _Analytics:
     def __init__(self) -> None:
         self.total_requests = 0
@@ -60,6 +62,69 @@ class _Analytics:
         # Schema usage tracking
         self.schema_usage: Dict[str, int] = {}  # schema_id -> usage_count
         self.schema_last_used: Dict[str, str] = {}  # schema_id -> last_used_timestamp
+        
+        # Persistence for serverless environments
+        self._storage_file = self._get_storage_path()
+        self._read_only_mode = False
+        self._load_from_disk()
+    
+    def _get_storage_path(self) -> Path:
+        """Get the path for analytics storage."""
+        import os
+        is_vercel = os.getenv('VERCEL') == '1' or os.getenv('VERCEL_ENV') is not None
+        if is_vercel:
+            storage_dir = Path('/tmp/data')
+        else:
+            backend_dir = Path(__file__).parent.parent
+            storage_dir = backend_dir / 'data'
+        
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        return storage_dir / 'analytics.json'
+    
+    def _load_from_disk(self) -> None:
+        """Load analytics data from disk if available."""
+        try:
+            if self._storage_file.exists():
+                with open(self._storage_file, 'r') as f:
+                    data = json.load(f)
+                    self.total_requests = data.get('total_requests', 0)
+                    self.total_tokens_in = data.get('total_tokens_in', 0)
+                    self.total_tokens_out = data.get('total_tokens_out', 0)
+                    self.total_cost = data.get('total_cost', 0.0)
+                    self.current_model = data.get('current_model', 'gpt-4')
+                    self.job_costs = data.get('job_costs', {})
+                    self.pass_costs = data.get('pass_costs', {})
+                    self.schema_usage = data.get('schema_usage', {})
+                    self.schema_last_used = data.get('schema_last_used', {})
+                    # Restore events (limited to last 1000 for memory efficiency)
+                    events_data = data.get('events', [])
+                    self.events = deque(events_data[-1000:], maxlen=10_000)
+        except Exception as e:
+            print(f"Warning: Could not load analytics from disk: {e}")
+            self._read_only_mode = True
+    
+    def _save_to_disk(self) -> None:
+        """Save analytics data to disk."""
+        if self._read_only_mode:
+            return
+        try:
+            data = {
+                'total_requests': self.total_requests,
+                'total_tokens_in': self.total_tokens_in,
+                'total_tokens_out': self.total_tokens_out,
+                'total_cost': self.total_cost,
+                'current_model': self.current_model,
+                'job_costs': self.job_costs,
+                'pass_costs': self.pass_costs,
+                'schema_usage': self.schema_usage,
+                'schema_last_used': self.schema_last_used,
+                'events': list(self.events)[-1000:],  # Save last 1000 events
+            }
+            with open(self._storage_file, 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            print(f"Warning: Could not save analytics to disk: {e}")
+            self._read_only_mode = True
 
     def add(self, in_tokens: int, out_tokens: int, model: str = "gpt-4", job_id: str = None) -> dict:
         now = int(time.time())
@@ -81,6 +146,7 @@ class _Analytics:
             self.pass_costs[job_id].append(cost_info['total_cost'])
         
         self.events.append((now, in_tokens, out_tokens, model, cost_info['total_cost']))
+        self._save_to_disk()  # Persist after each update
         return cost_info
 
     def summary_last_24h(self) -> Dict[str, Any]:
@@ -120,6 +186,7 @@ class _Analytics:
         if schema_level > 0:  # Only track active schemas
             self.schema_usage[schema_id] = self.schema_usage.get(schema_id, 0) + 1
             self.schema_last_used[schema_id] = datetime.now().isoformat()
+            self._save_to_disk()  # Persist after update
     
     def get_schema_usage_stats(self) -> dict:
         """Get schema usage statistics"""
