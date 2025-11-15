@@ -261,6 +261,15 @@ def _get_backend_dir() -> str:
 
 def _get_output_dir() -> str:
     """Returns the default output directory within backend."""
+    # Check if we're in a Vercel/serverless environment
+    is_vercel = os.getenv('VERCEL') == '1' or os.getenv('VERCEL_ENV') is not None
+    
+    if is_vercel:
+        # Use /tmp/data/output in serverless environments (only writable location)
+        output_dir = '/tmp/data/output'
+        os.makedirs(output_dir, exist_ok=True)
+        return output_dir
+    
     backend_dir = _get_backend_dir()
     env_output_dir = os.getenv("REFINER_OUTPUT_DIR")
     
