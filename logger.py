@@ -16,8 +16,17 @@ def _backend_root() -> str:
 
 def get_log_dir() -> str:
     """Returns the logs directory within backend folder."""
-    backend_dir = _backend_root()
-    logs = os.path.join(backend_dir, 'logs')
+    # Check if we're in a Vercel/serverless environment
+    is_vercel = os.getenv('VERCEL') == '1' or os.getenv('VERCEL_ENV') is not None
+    
+    if is_vercel:
+        # Use /tmp/logs in serverless environments (only writable location)
+        logs = '/tmp/logs'
+    else:
+        # Default to backend/logs
+        backend_dir = _backend_root()
+        logs = os.path.join(backend_dir, 'logs')
+    
     try:
         os.makedirs(logs, exist_ok=True)
     except Exception:
@@ -58,19 +67,25 @@ def get_logger(name: str = 'refiner', level: Optional[int] = None) -> logging.Lo
         datefmt='%Y-%m-%dT%H:%M:%SZ'
     )
     
-    # File handler with rotation
-    log_path = os.path.join(get_log_dir(), 'refiner.log')
-    file_handler = logging.handlers.RotatingFileHandler(
-        log_path, 
-        maxBytes=5*1024*1024,  # 5MB (reduced for better management)
-        backupCount=3,  # Keep only 3 backup files
-        encoding='utf-8'
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    # File handler with rotation (skip if we can't create the file)
+    try:
+        log_path = os.path.join(get_log_dir(), 'refiner.log')
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_path, 
+            maxBytes=5*1024*1024,  # 5MB (reduced for better management)
+            backupCount=3,  # Keep only 3 backup files
+            encoding='utf-8'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except (OSError, PermissionError, FileNotFoundError) as e:
+        # In serverless environments or if file logging fails, use console only
+        # This prevents crashes when filesystem is read-only
+        pass
     
-    # Console handler for development
-    if os.getenv('DEBUG'):
+    # Console handler - always add in serverless, or if DEBUG is set
+    is_vercel = os.getenv('VERCEL') == '1' or os.getenv('VERCEL_ENV') is not None
+    if os.getenv('DEBUG') or is_vercel:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
