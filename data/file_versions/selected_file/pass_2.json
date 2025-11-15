@@ -1,0 +1,53 @@
+{
+  "file_id": "selected_file",
+  "pass_number": 2,
+  "content": "Introduction. to be fair, as we delve into the intricate details of this project, it's crucial that we adhere strictly to the stipulated requirements and ensure that all functionalities are performing optimally. for what it's worth, 1. Firstly, the visual representation provided should be an exact reflection of the image captured, leaving no room for discrepancies. Let's take a closer look at the year—\n\nMoreover, 2. The only fee that should show must be processing fee of $25… Maintain exchange rate …. Best rate\n\nFurthermore, 2. Moving forward. there are two obligations that demand our attention: the Student Sevis fee and the tuition fees. It appears that only one of these necessities has been addressed. could you shed some light on this? 3. In terms of the project's scope, it's of utmost importance that the display indicates a transaction from Ghana to the US, not vice versa. This is a fundamental element of the project's functionality. 4. Lastly, it's essential to ensure that all services are fully compatible with mobile devices. When accessing the website via a mobile device, all functionalities available on a laptop should be readily accessible. As it stands, the Sevis fee payment, tuition fee payment, and remittances should all be mobile-friendly. Conclusion:\\1\\2addressing these issues is integral to the success of the project. The alignment of the tab with the image, the fulfillment of both obligations. Sometimes correct display of transactions, and the mobile compatibility of all services are all critical areas that demand immediate attention.\n\n---\n\n---\n\n---\n",
+  "timestamp": 1763157167.676721,
+  "file_path": "C:\\Users\\FALAK\\Desktop\\FinalAliBhai\\Alan-Refiner-Program\\backend\\data\\output\\tmpejp5trwl_pass2.docx",
+  "metrics": {
+    "changePercent": 95.70569710850272,
+    "tensionPercent": 95.70569710850272,
+    "scannerRisk": null,
+    "success": true,
+    "localPath": "C:\\Users\\FALAK\\Desktop\\FinalAliBhai\\Alan-Refiner-Program\\backend\\data\\output\\tmpejp5trwl_pass2.docx",
+    "docId": null,
+    "originalLength": 1902,
+    "finalLength": 1591,
+    "processingTime": 28049.53720001504
+  },
+  "metadata": {
+    "job_id": "0c5e68af-6a71-4e7a-b2e7-1d35900f583a",
+    "entropy_level": "medium",
+    "heuristics": {
+      "microstructure_control": true,
+      "macrostructure_analysis": true,
+      "anti_scanner_techniques": true,
+      "refiner_control": 2,
+      "entropy_management": 2,
+      "semantic_tone_tuning": 1,
+      "history_analysis": true,
+      "annotation_mode": false,
+      "humanize_academic": {
+        "enabled": true,
+        "intensity": "medium"
+      },
+      "formatting_safeguards": {
+        "enabled": true,
+        "mode": "strict"
+      },
+      "keywords": [],
+      "strategy_weights": {
+        "clarity": 0.5,
+        "persuasion": 0.6499999999999999,
+        "brevity": 0.4,
+        "formality": 0.6000000000000001
+      },
+      "entropy": {
+        "risk_preference": 0.7,
+        "repeat_penalty": 0.8999999999999999,
+        "phrase_penalty": 0.6000000000000001
+      }
+    },
+    "processing_time": 28049.53720001504
+  }
+}

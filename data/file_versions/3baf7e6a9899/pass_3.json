@@ -1,0 +1,53 @@
+{
+  "file_id": "3baf7e6a9899",
+  "pass_number": 3,
+  "content": "to be fair, introduction:\n\nMoreover, in pursuit of an impeccable user experience, it's imperative that every aspect of our platform operates at its peak. for what it's worth, this document highlights several critical areas that require immediate attention and adjustment. 1. The interface of the tab must be an exact replica of the image provided below, with zero tolerance for any discrepancies. 2. The only fee that should show must be processing fee of $25. Maintain exchange rate …. Best rate\n\nFurthermore, 2. We've identified a deficiency in requirement fulfillment. in particular, both the Student Sevis fee and tuition fees need to be paid. It's puzzling that only one of these prerequisites has been met. 3. Within the scope of this project, the display should indicate a transaction from Ghana to the US, not the other way around. This is a crucial detail that calls for immediate correction. 4. There's an immediate need to address the mobile compatibility of our services. As it stands, none of them are functional on mobile devices. when accessed via a mobile device, all features that work on a laptop should perform equivalently. At present, the Sevis fee payment, tuition fee payment, and remittances should all be available on mobile devices. Conclusion:\\1\\2these are the pressing areas that require immediate rectification. By addressing these issues, we can significantly improve the user experience and overall functionality of our platform. Let's strive to swiftly implement these essential enhancements.\n\n---\n\n---\n\n---\n",
+  "timestamp": 1763154433.6264408,
+  "file_path": "./output\\tmpejp5trwl_pass3_sim1.docx",
+  "metrics": {
+    "changePercent": 80.3985625612545,
+    "tensionPercent": 80.3985625612545,
+    "scannerRisk": 0.0,
+    "success": true,
+    "localPath": "./output\\tmpejp5trwl_pass3_sim1.docx",
+    "docId": null,
+    "originalLength": 761,
+    "finalLength": 1540,
+    "processingTime": 27671.63199998322
+  },
+  "metadata": {
+    "input_path": "C:\\Users\\FALAK\\AppData\\Local\\Temp\\tmpejp5trwl.docx",
+    "entropy_level": "medium",
+    "heuristics": {
+      "microstructure_control": true,
+      "macrostructure_analysis": true,
+      "anti_scanner_techniques": true,
+      "refiner_control": 2,
+      "entropy_management": 2,
+      "semantic_tone_tuning": 1,
+      "history_analysis": true,
+      "annotation_mode": false,
+      "humanize_academic": {
+        "enabled": true,
+        "intensity": "medium"
+      },
+      "formatting_safeguards": {
+        "enabled": true,
+        "mode": "strict"
+      },
+      "keywords": [],
+      "strategy_weights": {
+        "clarity": 0.5,
+        "persuasion": 0.6499999999999999,
+        "brevity": 0.4,
+        "formality": 0.6000000000000001
+      },
+      "entropy": {
+        "risk_preference": 0.7,
+        "repeat_penalty": 0.8999999999999999,
+        "phrase_penalty": 0.6000000000000001
+      }
+    },
+    "processing_time": 27671.63199998322
+  }
+}

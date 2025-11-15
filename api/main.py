@@ -262,7 +262,19 @@ def _get_backend_dir() -> str:
 def _get_output_dir() -> str:
     """Returns the default output directory within backend."""
     backend_dir = _get_backend_dir()
-    output_dir = os.getenv("REFINER_OUTPUT_DIR", os.path.join(backend_dir, "data", "output"))
+    env_output_dir = os.getenv("REFINER_OUTPUT_DIR")
+    
+    if env_output_dir:
+        # If absolute path, use as-is
+        if os.path.isabs(env_output_dir):
+            output_dir = env_output_dir
+        else:
+            # If relative path, resolve relative to backend directory
+            output_dir = os.path.join(backend_dir, env_output_dir)
+    else:
+        # Default to backend/data/output
+        output_dir = os.path.join(backend_dir, "data", "output")
+    
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
