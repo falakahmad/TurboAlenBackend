@@ -30,11 +30,29 @@ class StrategyFeedbackManager:
     
     def __init__(self, storage_dir: str = None):
         if storage_dir is None:
-            # Default to backend/data/strategy_feedback
-            backend_dir = Path(__file__).parent.parent.parent
-            storage_dir = str(backend_dir / 'data' / 'strategy_feedback')
+            # Check if we're in a Vercel/serverless environment
+            is_vercel = os.getenv('VERCEL') == '1' or os.getenv('VERCEL_ENV') is not None
+            
+            if is_vercel:
+                # Use /tmp in serverless environments (only writable location)
+                storage_dir = '/tmp/data/strategy_feedback'
+            else:
+                # Default to backend/data/strategy_feedback
+                backend_dir = Path(__file__).parent.parent.parent
+                storage_dir = str(backend_dir / 'data' / 'strategy_feedback')
+        
         self.storage_dir = Path(storage_dir)
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Try to create directory, but don't fail if we can't (e.g., read-only filesystem)
+        try:
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+        except (OSError, PermissionError) as e:
+            # In serverless environments, we'll rely on in-memory cache only
+            print(f"Warning: Could not create storage directory {self.storage_dir}: {e}")
+            print("Falling back to in-memory storage only.")
+            self._read_only_mode = True
+        else:
+            self._read_only_mode = False
         
         # In-memory cache for active feedback
         self._feedback_cache: Dict[str, List[StrategyFeedback]] = {}
@@ -122,17 +140,29 @@ class StrategyFeedbackManager:
     
     def _persist_feedback(self, feedback: StrategyFeedback):
         """Persist feedback to disk."""
-        user_dir = self.storage_dir / feedback.user_id
-        user_dir.mkdir(exist_ok=True)
+        if self._read_only_mode:
+            # Skip disk persistence in read-only mode
+            return
         
-        feedback_file = user_dir / f"feedback_{feedback.feedback_id}.json"
-        
-        feedback_data = asdict(feedback)
-        with open(feedback_file, 'w', encoding='utf-8') as f:
-            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+        try:
+            user_dir = self.storage_dir / feedback.user_id
+            user_dir.mkdir(exist_ok=True)
+            
+            feedback_file = user_dir / f"feedback_{feedback.feedback_id}.json"
+            
+            feedback_data = asdict(feedback)
+            with open(feedback_file, 'w', encoding='utf-8') as f:
+                json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+        except (OSError, PermissionError):
+            # Can't write to disk, skip persistence
+            pass
     
     def _load_user_feedback(self, user_id: str):
         """Load user feedback from disk."""
+        if self._read_only_mode:
+            self._feedback_cache[user_id] = []
+            return
+        
         user_dir = self.storage_dir / user_id
         
         if not user_dir.exists():
@@ -160,11 +190,17 @@ class StrategyFeedbackManager:
         if user_id in self._feedback_cache:
             del self._feedback_cache[user_id]
         
-        user_dir = self.storage_dir / user_id
-        if user_dir.exists():
-            for feedback_file in user_dir.glob("feedback_*.json"):
-                feedback_file.unlink()
-            user_dir.rmdir()
+        if self._read_only_mode:
+            return
+        
+        try:
+            user_dir = self.storage_dir / user_id
+            if user_dir.exists():
+                for feedback_file in user_dir.glob("feedback_*.json"):
+                    feedback_file.unlink()
+                user_dir.rmdir()
+        except (OSError, PermissionError):
+            pass
     
     def cleanup_old_feedback(self, days_to_keep: int = 90):
         """Clean up feedback older than specified days."""
@@ -179,10 +215,14 @@ class StrategyFeedbackManager:
                     kept_feedback.append(feedback)
                 else:
                     # Remove old feedback file
-                    user_dir = self.storage_dir / user_id
-                    feedback_file = user_dir / f"feedback_{feedback.feedback_id}.json"
-                    if feedback_file.exists():
-                        feedback_file.unlink()
+                    if not self._read_only_mode:
+                        try:
+                            user_dir = self.storage_dir / user_id
+                            feedback_file = user_dir / f"feedback_{feedback.feedback_id}.json"
+                            if feedback_file.exists():
+                                feedback_file.unlink()
+                        except (OSError, PermissionError):
+                            pass
             
             self._feedback_cache[user_id] = kept_feedback
 

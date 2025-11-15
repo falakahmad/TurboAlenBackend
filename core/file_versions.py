@@ -24,11 +24,29 @@ class FileVersionManager:
     
     def __init__(self, storage_dir: str = None, max_cache_size: int = 1000):
         if storage_dir is None:
-            # Default to backend/data/file_versions
-            backend_dir = Path(__file__).parent.parent.parent
-            storage_dir = str(backend_dir / 'data' / 'file_versions')
+            # Check if we're in a Vercel/serverless environment
+            is_vercel = os.getenv('VERCEL') == '1' or os.getenv('VERCEL_ENV') is not None
+            
+            if is_vercel:
+                # Use /tmp in serverless environments (only writable location)
+                storage_dir = '/tmp/data/file_versions'
+            else:
+                # Default to backend/data/file_versions
+                backend_dir = Path(__file__).parent.parent.parent
+                storage_dir = str(backend_dir / 'data' / 'file_versions')
+        
         self.storage_dir = Path(storage_dir)
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Try to create directory, but don't fail if we can't (e.g., read-only filesystem)
+        try:
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+        except (OSError, PermissionError) as e:
+            # In serverless environments, we'll rely on in-memory cache only
+            print(f"Warning: Could not create storage directory {self.storage_dir}: {e}")
+            print("Falling back to in-memory storage only.")
+            self._read_only_mode = True
+        else:
+            self._read_only_mode = False
         
         # In-memory cache for active versions with size limit
         self._versions_cache: Dict[str, Dict[int, FileVersion]] = {}
@@ -116,8 +134,16 @@ class FileVersionManager:
     
     def _persist_version(self, version: FileVersion):
         """Persist a version to disk."""
-        file_dir = self.storage_dir / version.file_id
-        file_dir.mkdir(exist_ok=True)
+        if self._read_only_mode:
+            # Skip disk persistence in read-only mode
+            return
+        
+        try:
+            file_dir = self.storage_dir / version.file_id
+            file_dir.mkdir(exist_ok=True)
+        except (OSError, PermissionError):
+            # Can't write to disk, skip persistence
+            return
         
         version_file = file_dir / f"pass_{version.pass_number}.json"
         
@@ -141,6 +167,9 @@ class FileVersionManager:
     
     def _load_version(self, file_id: str, pass_number: int) -> Optional[FileVersion]:
         """Load a version from disk."""
+        if self._read_only_mode:
+            return None
+        
         version_file = self.storage_dir / file_id / f"pass_{pass_number}.json"
         
         if not version_file.exists():
@@ -166,6 +195,10 @@ class FileVersionManager:
     
     def _load_all_versions(self, file_id: str):
         """Load all versions for a file from disk."""
+        if self._read_only_mode:
+            self._versions_cache[file_id] = {}
+            return
+        
         file_dir = self.storage_dir / file_id
         
         if not file_dir.exists():
@@ -204,14 +237,20 @@ class FileVersionManager:
         if file_id in self._versions_cache and pass_number in self._versions_cache[file_id]:
             del self._versions_cache[file_id][pass_number]
         
-        # Remove from disk
-        version_file = self.storage_dir / file_id / f"pass_{pass_number}.json"
-        content_file = self.storage_dir / file_id / f"pass_{pass_number}_content.txt"
+        if self._read_only_mode:
+            return
         
-        if version_file.exists():
-            version_file.unlink()
-        if content_file.exists():
-            content_file.unlink()
+        # Remove from disk
+        try:
+            version_file = self.storage_dir / file_id / f"pass_{pass_number}.json"
+            content_file = self.storage_dir / file_id / f"pass_{pass_number}_content.txt"
+            
+            if version_file.exists():
+                version_file.unlink()
+            if content_file.exists():
+                content_file.unlink()
+        except (OSError, PermissionError):
+            pass
 
 # Global instance
 file_version_manager = FileVersionManager()
